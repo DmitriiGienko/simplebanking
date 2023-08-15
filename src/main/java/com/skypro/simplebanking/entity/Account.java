@@ -6,6 +6,7 @@ import javax.persistence.*;
 @Entity
 @Table(name = "accounts")
 public class Account {
+
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "account-sequence")
   @SequenceGenerator(name = "account-sequence", sequenceName = "account_sequence")
