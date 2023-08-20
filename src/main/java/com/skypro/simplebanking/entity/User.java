@@ -2,8 +2,6 @@ package com.skypro.simplebanking.entity;
 
 import javax.persistence.*;
 import java.util.Collection;
-import java.util.List;
-import java.util.Set;
 
 @Entity
 @Table(name = "users")

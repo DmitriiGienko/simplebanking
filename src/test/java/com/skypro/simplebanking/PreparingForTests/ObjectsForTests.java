@@ -1,7 +1,6 @@
 package com.skypro.simplebanking.PreparingForTests;
 
 import com.skypro.simplebanking.entity.User;
-import net.bytebuddy.asm.Advice;
 import org.json.JSONException;
 import org.json.JSONObject;
 
