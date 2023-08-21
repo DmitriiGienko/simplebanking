@@ -62,18 +62,14 @@ class UserControllerTest {
     @Test
     @WithMockUser(roles = "USER")
     void shouldCreateNewUser_Ok() throws Exception {
-//        JSONObject jsonUser = new JSONObject();
-//        jsonUser.put("id", "1");
-//        jsonUser.put("username", "user1");
-//        jsonUser.put("password", "pass1");
 
         mockMvc.perform(post("/user")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createNewUser().toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username", is("newUser")));
-
     }
+
 
     @DisplayName("Получение всех пользователей")
     @Test
