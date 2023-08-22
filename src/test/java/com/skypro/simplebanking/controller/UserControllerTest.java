@@ -24,8 +24,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Base64;
 
-import static com.skypro.simplebanking.PreparingForTests.ObjectsForTests.createNewUser;
-import static com.skypro.simplebanking.PreparingForTests.ObjectsForTests.getUsersForTests;
+import static com.skypro.simplebanking.PreparingForTests.ObjectsForTests.*;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -37,7 +36,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Testcontainers
 @AutoConfigureMockMvc
 class UserControllerTest {
-
 
     @Container
     private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:13")
@@ -65,19 +63,19 @@ class UserControllerTest {
         userRepository.deleteAll();
     }
 
-    // Заполнение БД для аутентификация
+//     Заполнение БД для аутентификация
     public void createDataBase() {
         userService.createUser("user1", "password1");
         userService.createUser("user2", "password2");
         userService.createUser("user3", "password3");
     }
 
-    private static String getAuthenticationHeader(String username, String password) {
-
-        String encoding = Base64.getEncoder()
-                .encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
-        return "Basic " + encoding;
-    }
+//    private static String getAuthenticationHeader(String username, String password) {
+//
+//        String encoding = Base64.getEncoder()
+//                .encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
+//        return "Basic " + encoding;
+//    }
 
     @Test
     void testPostgresql() throws SQLException {

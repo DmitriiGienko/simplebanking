@@ -10,9 +10,12 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 
 public class ObjectsForTests {
+
 
     private UserRepository userRepository;
 
@@ -29,6 +32,13 @@ public class ObjectsForTests {
         return jsonUser;
     }
 
+    // настройка аутентификатора
+    public static String getAuthenticationHeader(String username, String password) {
+
+        String encoding = Base64.getEncoder()
+                .encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
+        return "Basic " + encoding;
+    }
 
 
 //    public static List<JSONObject> createListOfUsers() throws JSONException {
@@ -69,26 +79,25 @@ public class ObjectsForTests {
     }
 
     public static List<Account> getAccountForTests() {
+        List<User> users = getUsersForTests();
         Account account1 = new Account();
-//        account1.setId(1L);
+        account1.setId(1L);
         account1.setAccountCurrency(AccountCurrency.EUR);
         account1.setAmount(1300L);
-        account1.setUser(getUsersForTests().get(0));
+        account1.setUser(users.get(1));
         Account account2 = new Account();
-//        account1.setId(1L);
+        account2.setId(2L);
         account2.setAccountCurrency(AccountCurrency.RUB);
         account2.setAmount(8000L);
-        account2.setUser(getUsersForTests().get(1));
-
+        account2.setUser(users.get(1));
         Account account3 = new Account();
-//        account1.setId(1L);
+        account3.setId(3L);
         account3.setAccountCurrency(AccountCurrency.USD);
         account3.setAmount(3200L);
-        account3.setUser(getUsersForTests().get(2));
+        account3.setUser(users.get(3));
 
         return List.of(account1, account2, account3);
     }
-
 
 
 }
