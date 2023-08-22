@@ -98,6 +98,18 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.username", is("newUser")));
     }
 
+    @DisplayName("Создание нового пользователя Админом")
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void shouldCreateNewUserByAdmin_Ok() throws Exception {
+
+        mockMvc.perform(post("/user")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createNewUser().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username", is("newUser")));
+    }
+
 
     @DisplayName("Получение всех пользователей")
     @Test
@@ -116,6 +128,14 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.length()").value(4));
     }
 
+    @DisplayName("Получение всех пользователей Админом")
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void shouldNotGetAllUser_NotForbiddenForAdmin() throws Exception {
+        mockMvc.perform(get("/user/list"))
+                .andExpect(status().isForbidden());
+    }
+
     @DisplayName("Получение профиля пользователя")
     @Test
     @WithMockUser(roles = "USER")
@@ -129,6 +149,7 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("user1"));
     }
+
 
     @DisplayName("Пользователь не прошел аутентификацию")
     @Test
