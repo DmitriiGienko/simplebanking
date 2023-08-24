@@ -75,26 +75,30 @@ public class ObjectsForTests {
         user4.setUsername("user4");
         user4.setPassword("password4");
 
+
+
         return List.of(user1, user2, user3, user4);
     }
 
     public static List<Account> getAccountForTests() {
         List<User> users = getUsersForTests();
         Account account1 = new Account();
-        account1.setId(1L);
+//        account1.setId(1L);
         account1.setAccountCurrency(AccountCurrency.EUR);
         account1.setAmount(1300L);
-        account1.setUser(users.get(1));
+        account1.setUser(users.get(0));
+
         Account account2 = new Account();
-        account2.setId(2L);
+//        account2.setId(2L);
         account2.setAccountCurrency(AccountCurrency.RUB);
         account2.setAmount(8000L);
         account2.setUser(users.get(1));
         Account account3 = new Account();
-        account3.setId(3L);
+
+//        account3.setId(3L);
         account3.setAccountCurrency(AccountCurrency.USD);
         account3.setAmount(3200L);
-        account3.setUser(users.get(3));
+        account3.setUser(users.get(2));
 
         return List.of(account1, account2, account3);
     }

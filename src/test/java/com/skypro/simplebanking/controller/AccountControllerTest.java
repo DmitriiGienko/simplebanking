@@ -1,5 +1,6 @@
 package com.skypro.simplebanking.controller;
 
+import com.skypro.simplebanking.dto.UserDTO;
 import com.skypro.simplebanking.entity.Account;
 import com.skypro.simplebanking.entity.AccountCurrency;
 import com.skypro.simplebanking.entity.User;
@@ -18,6 +19,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -25,6 +27,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import javax.sql.DataSource;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.skypro.simplebanking.PreparingForTests.ObjectsForTests.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -64,40 +67,17 @@ class AccountControllerTest {
 
     @BeforeEach
     public void createDataBase() {
-        User user1 = new User();
-        user1.setUsername("user1");
-        user1.setPassword("password1");
-        user1.setAccounts(List.of());
-        User user2 = new User();
-        user2.setUsername("user2");
-        user2.setPassword("password2");
-        User user3 = new User();
-        user3.setUsername("user3");
-        user3.setPassword("password3");
 
-        userService.createUser(user1.getUsername(), user2.getPassword());
-        userService.createUser(user2.getUsername(), user2.getPassword());
-        userService.createUser(user3.getUsername(), user3.getPassword());
+//        userService.createUser("user1", "password1");
+//        userService.createUser("user2", "password2");
+//        userService.createUser("user3", "password3");
 
-        Account account1 = new Account();
-//        account1.setId(1L);
-        account1.setAccountCurrency(AccountCurrency.EUR);
-        account1.setAmount(1300L);
-//        account1.setUser(user1);
-        Account account2 = new Account();
-//        account2.setId(2L);
-        account2.setAccountCurrency(AccountCurrency.RUB);
-        account2.setAmount(8000L);
-//        account2.setUser(user2);
-        Account account3 = new Account();
-//        account3.setId(3L);
-        account3.setAccountCurrency(AccountCurrency.USD);
-        account3.setAmount(3200L);
-//        account3.setUser(user3);
-        List<Account> accounts = List.of(account1, account2, account3);
+        List<User> users = getUsersForTests();
+        List<UserDTO> userDTOList = users.stream().map(user ->
+                userService.createUser(user.getUsername(), user.getPassword())
 
-        accountRepository.saveAll(accounts);
-
+        ).collect(Collectors.toList());
+        userRepository.saveAll(getUsersForTests());
 
 
     }
@@ -113,27 +93,23 @@ class AccountControllerTest {
     @WithMockUser(roles = "USER")
     void getUserAccount() throws Exception {
 
-////        createDataBase();
-////        accountRepository.saveAll(getAccountForTests());
-//        Long accountId = c;
-//        String userName = getAccountForTests().get(0).getUser().getUsername();
-//        String userPassword = getAccountForTests().get(0).getUser().getPassword();
-//        String accountCorrency = getAccountForTests().get(0).getAccountCurrency().toString();
-        User user = userRepository.findByUsername("user1").orElseThrow();
-
+//
 //        Account account = new Account();
-//        account.setId(1L);
+////        account.setId(1L);
 //        account.setAccountCurrency(AccountCurrency.RUB);
 //        account.setAmount(100L);
-//        account.setUser(user);
+//        User userForTest = userRepository.findByUsername("user1").orElseThrow();
+//        account.setUser(userForTest);
 //        accountRepository.save(account);
 
+        accountRepository.saveAll(getAccountForTests());
 
-        mockMvc.perform(get("/account/{id}", String.valueOf(1))
+
+        mockMvc.perform(get("/account/{id}", String.valueOf(accountRepository.findAll().get(0)))
                         .header(HttpHeaders.AUTHORIZATION,
                                 getAuthenticationHeader("user1", "password1")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.currency").value(AccountCurrency.USD));
+                .andExpect(jsonPath("$.currency").value(AccountCurrency.RUB));
     }
 
     @Test
