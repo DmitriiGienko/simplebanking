@@ -73,9 +73,9 @@ class AccountControllerTest {
 //        userService.createUser("user3", "password3");
 
         List<User> users = getUsersForTests();
-        List<UserDTO> userDTOList = users.stream().map(user ->
+        List<UserDTO> userDTOList = users.stream()
+                .map(user ->
                 userService.createUser(user.getUsername(), user.getPassword())
-
         ).collect(Collectors.toList());
         userRepository.saveAll(getUsersForTests());
 
