@@ -19,10 +19,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import javax.sql.DataSource;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Base64;
 
 import static com.skypro.simplebanking.PreparingForTests.ObjectsForTests.*;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -69,13 +67,6 @@ class UserControllerTest {
         userService.createUser("user2", "password2");
         userService.createUser("user3", "password3");
     }
-
-//    private static String getAuthenticationHeader(String username, String password) {
-//
-//        String encoding = Base64.getEncoder()
-//                .encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
-//        return "Basic " + encoding;
-//    }
 
     @Test
     void testPostgresql() throws SQLException {

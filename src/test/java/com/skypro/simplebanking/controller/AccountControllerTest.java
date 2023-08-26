@@ -1,12 +1,13 @@
 package com.skypro.simplebanking.controller;
 
+import com.skypro.simplebanking.dto.AccountDTO;
 import com.skypro.simplebanking.dto.UserDTO;
 import com.skypro.simplebanking.entity.Account;
 import com.skypro.simplebanking.entity.AccountCurrency;
-import com.skypro.simplebanking.entity.User;
 import com.skypro.simplebanking.repository.AccountRepository;
 import com.skypro.simplebanking.repository.UserRepository;
 import com.skypro.simplebanking.service.UserService;
+import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,25 +16,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import javax.sql.DataSource;
-
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
-import static com.skypro.simplebanking.PreparingForTests.ObjectsForTests.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static com.skypro.simplebanking.PreparingForTests.ObjectsForTests.getAuthenticationHeader;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @Testcontainers
@@ -65,21 +63,22 @@ class AccountControllerTest {
     @Autowired
     private UserService userService;
 
+    private String username = "user1";
+    private String password = "password1";
+    private UserDTO userDTO;
+    private List<AccountDTO> accounts;
+
     @BeforeEach
     public void createDataBase() {
+        userDTO = userService.createUser(username, password);
+        accounts = userDTO.getAccounts();
 
-//        userService.createUser("user1", "password1");
-//        userService.createUser("user2", "password2");
-//        userService.createUser("user3", "password3");
-
-        List<User> users = getUsersForTests();
-        List<UserDTO> userDTOList = users.stream()
-                .map(user ->
-                userService.createUser(user.getUsername(), user.getPassword())
-        ).collect(Collectors.toList());
-        userRepository.saveAll(getUsersForTests());
-
-
+        Optional<Account> accountByUser_idAndId = accountRepository.getAccountByUser_IdAndId(
+                userDTO.getId(), accounts.get(2).getId());
+        accountByUser_idAndId.ifPresent(account -> {
+            account.setAmount(1000L);
+            accountRepository.save(account);
+        });
     }
 
     @AfterEach
@@ -90,33 +89,134 @@ class AccountControllerTest {
 
     @DisplayName("Получение данных по id аккаунта и id пользователя ")
     @Test
-    @WithMockUser(roles = "USER")
-    void getUserAccount() throws Exception {
-
-//
-//        Account account = new Account();
-////        account.setId(1L);
-//        account.setAccountCurrency(AccountCurrency.RUB);
-//        account.setAmount(100L);
-//        User userForTest = userRepository.findByUsername("user1").orElseThrow();
-//        account.setUser(userForTest);
-//        accountRepository.save(account);
-
-        accountRepository.saveAll(getAccountForTests());
-
-
-        mockMvc.perform(get("/account/{id}", String.valueOf(accountRepository.findAll().get(0)))
+    void shouldGetUserAccount_Ok() throws Exception {
+        mockMvc.perform(get("/account/{id}", getRubAccount().getId()
+                )
                         .header(HttpHeaders.AUTHORIZATION,
-                                getAuthenticationHeader("user1", "password1")))
+                                getAuthenticationHeader(username, password)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.currency").value(AccountCurrency.RUB));
+                .andExpect(jsonPath("$.currency").value(AccountCurrency.RUB.name()))
+                .andExpect(jsonPath("$.amount").value(1000));
     }
 
+    @DisplayName("Ошибка получения данных по id аккаунта и id пользователя ")
     @Test
-    void depositToAccount() {
+    void shouldGetUserAccount_ErrorUserName() throws Exception {
+        mockMvc.perform(get("/account/{id}", getRubAccount().getId())
+                        .header(HttpHeaders.AUTHORIZATION,
+                                getAuthenticationHeader("username13", password)))
+                .andExpect(status().isUnauthorized());
     }
 
+    @DisplayName("Ошибка получения данных - не верный id аккаунта")
     @Test
-    void withdrawFromAccount() {
+    void shouldGetUserAccount_ErrorAccountId() throws Exception {
+        mockMvc.perform(get("/account/{id}", getRubAccount().getId() + 1)
+                        .header(HttpHeaders.AUTHORIZATION,
+                                getAuthenticationHeader(username, password)))
+                .andExpect(status().isNotFound());
+    }
+
+    @DisplayName("Пополнение счета")
+    @Test
+    void shouldDepositToAccount_Ok() throws Exception {
+
+        JSONObject balanceChange = new JSONObject();
+        balanceChange.put("amount", 500L);
+
+        mockMvc.perform(post("/account/deposit/{id}", getRubAccount().getId())
+                        .header(HttpHeaders.AUTHORIZATION,
+                                getAuthenticationHeader(username, password))
+                        .content(balanceChange.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.amount").value(1500));
+    }
+
+    @DisplayName("Недопустимая сумма пополнения")
+    @Test
+    void shouldNotDepositToAccount_invalidAmount() throws Exception {
+
+        JSONObject balanceChange = new JSONObject();
+        balanceChange.put("amount", -15L);
+
+        mockMvc.perform(post("/account/deposit/{id}", getRubAccount().getId())
+                        .header(HttpHeaders.AUTHORIZATION,
+                                getAuthenticationHeader(username, password))
+                        .content(balanceChange.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Amount should be more than 0"));
+    }
+
+    @DisplayName("Списание средств")
+    @Test
+    void shouldWithdrawFromAccount_Oк() throws Exception {
+
+        JSONObject balanceChange = new JSONObject();
+        balanceChange.put("amount", 500L);
+
+        mockMvc.perform(post("/account/withdraw/{id}", getRubAccount().getId())
+                        .header(HttpHeaders.AUTHORIZATION,
+                                getAuthenticationHeader(username, password))
+                        .content(balanceChange.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.amount").value(500));
+    }
+
+    @DisplayName("Недопустимая сумма списания")
+    @Test
+    void shouldNotWithdrawFromAccount_invalidAmount() throws Exception {
+
+        JSONObject balanceChange = new JSONObject();
+        balanceChange.put("amount", -100L);
+
+        mockMvc.perform(post("/account/withdraw/{id}", getRubAccount().getId())
+                        .header(HttpHeaders.AUTHORIZATION,
+                                getAuthenticationHeader(username, password))
+                        .content(balanceChange.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Amount should be more than 0"));
+    }
+
+    @DisplayName("Превышена сумма списания")
+    @Test
+    void shouldNotWithdrawFromAccount_exceededAmount() throws Exception {
+
+        long amount = 1500L;
+
+        JSONObject balanceChange = new JSONObject();
+        balanceChange.put("amount", amount);
+
+        mockMvc.perform(post("/account/withdraw/{id}", getRubAccount().getId())
+                        .header(HttpHeaders.AUTHORIZATION,
+                                getAuthenticationHeader(username, password))
+                        .content(balanceChange.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(String.format("Cannot withdraw %d %s", amount, AccountCurrency.RUB)));
+    }
+
+    @DisplayName("Списание невозможно - ошибка данных аккаунта/пользователя")
+    @Test
+    void shouldNotWithdrawFromAccount_InputsDataError() throws Exception {
+        mockMvc.perform(get("/account/{id}", getRubAccount().getId() + 1)
+                        .header(HttpHeaders.AUTHORIZATION,
+                                getAuthenticationHeader(username, password)))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(get("/account/{id}", getRubAccount().getId())
+                        .header(HttpHeaders.AUTHORIZATION,
+                                getAuthenticationHeader("username1", password)))
+                .andExpect(status().isUnauthorized());
+
+    }
+
+    private AccountDTO getRubAccount() {
+        return accounts.stream()
+                .filter(accountDTO -> accountDTO.getCurrency().equals(AccountCurrency.RUB))
+                .findFirst().orElse(null);
     }
 }
