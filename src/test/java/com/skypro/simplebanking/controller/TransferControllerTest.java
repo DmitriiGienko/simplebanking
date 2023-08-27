@@ -23,7 +23,6 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import javax.sql.DataSource;
 import java.util.List;
 
 import static com.skypro.simplebanking.PreparingForTests.ObjectsForTests.getAuthenticationHeader;
@@ -40,7 +39,6 @@ class TransferControllerTest {
     private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:13")
             .withUsername("postgres")
             .withPassword("postgres");
-    private UserDTO userDTO;
 
     @DynamicPropertySource
     static void postgresProperties(DynamicPropertyRegistry registry) {
@@ -50,8 +48,6 @@ class TransferControllerTest {
     }
 
     @Autowired
-    private DataSource dataSource;
-    @Autowired
     private UserRepository userRepository;
     @Autowired
     private AccountRepository accountRepository;
@@ -59,10 +55,6 @@ class TransferControllerTest {
     MockMvc mockMvc;
     @Autowired
     private UserService userService;
-    private List<AccountDTO> accounts;
-
-    private AccountDTO accountDTO;
-
 
     @BeforeEach
 
@@ -90,10 +82,10 @@ class TransferControllerTest {
     @Test
     void shouldTransfer_Ok() throws Exception {
 
-        Long fromUserId = userRepository.findByUsername("user1").get().getId();
-        Long toUserId = userRepository.findByUsername("user2").get().getId();
-        Long fromId = getRubAccount(userService.getUser(fromUserId).getAccounts()).getId();
-        Long toId = getRubAccount(userService.getUser(toUserId).getAccounts()).getId();
+        long fromUserId = userRepository.findByUsername("user1").get().getId();
+        long toUserId = userRepository.findByUsername("user2").get().getId();
+        long fromId = getRubAccount(userService.getUser(fromUserId).getAccounts()).getId();
+        long toId = getRubAccount(userService.getUser(toUserId).getAccounts()).getId();
 
         JSONObject transfer = new JSONObject();
         transfer.put("fromAccountId", fromId);
@@ -113,10 +105,10 @@ class TransferControllerTest {
     @Test
     void shouldNoTransfer_IncorrectId() throws Exception {
 
-        Long fromUserId = userRepository.findByUsername("user1").get().getId();
-        Long toUserId = userRepository.findByUsername("user2").get().getId();
-        Long fromId = getRubAccount(userService.getUser(fromUserId).getAccounts()).getId();
-        Long toId = getRubAccount(userService.getUser(toUserId).getAccounts()).getId();
+        long fromUserId = userRepository.findByUsername("user1").get().getId();
+        long toUserId = userRepository.findByUsername("user2").get().getId();
+        long fromId = getRubAccount(userService.getUser(fromUserId).getAccounts()).getId();
+        long toId = getRubAccount(userService.getUser(toUserId).getAccounts()).getId();
 
         JSONObject transfer = new JSONObject();
         transfer.put("fromAccountId", fromId);
@@ -136,10 +128,10 @@ class TransferControllerTest {
     @Test
     void shouldNoTransfer_IncorrectAmount() throws Exception {
 
-        Long fromUserId = userRepository.findByUsername("user1").get().getId();
-        Long toUserId = userRepository.findByUsername("user2").get().getId();
-        Long fromId = getRubAccount(userService.getUser(fromUserId).getAccounts()).getId();
-        Long toId = getRubAccount(userService.getUser(toUserId).getAccounts()).getId();
+        long fromUserId = userRepository.findByUsername("user1").get().getId();
+        long toUserId = userRepository.findByUsername("user2").get().getId();
+        long fromId = getRubAccount(userService.getUser(fromUserId).getAccounts()).getId();
+        long toId = getRubAccount(userService.getUser(toUserId).getAccounts()).getId();
 
         JSONObject transfer = new JSONObject();
         transfer.put("fromAccountId", fromId);
