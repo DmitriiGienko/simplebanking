@@ -29,6 +29,7 @@ public class UserController {
   public List<ListUserDTO> getAllUsers(){
     return userService.listUsers();
   }
+
   @GetMapping("/me")
   public UserDTO getMyProfile(Authentication authentication){
     BankingUserDetails bankingUserDetails = (BankingUserDetails) authentication.getPrincipal();
