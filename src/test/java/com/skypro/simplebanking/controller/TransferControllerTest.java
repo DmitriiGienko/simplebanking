@@ -2,13 +2,14 @@ package com.skypro.simplebanking.controller;
 
 import com.skypro.simplebanking.dto.AccountDTO;
 import com.skypro.simplebanking.dto.UserDTO;
-import com.skypro.simplebanking.entity.Account;
 import com.skypro.simplebanking.entity.AccountCurrency;
 import com.skypro.simplebanking.repository.AccountRepository;
 import com.skypro.simplebanking.repository.UserRepository;
 import com.skypro.simplebanking.service.UserService;
 import net.minidev.json.JSONObject;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -23,13 +24,11 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import javax.sql.DataSource;
-
 import java.util.List;
-import java.util.Optional;
 
 import static com.skypro.simplebanking.PreparingForTests.ObjectsForTests.getAuthenticationHeader;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -41,6 +40,7 @@ class TransferControllerTest {
     private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:13")
             .withUsername("postgres")
             .withPassword("postgres");
+    private UserDTO userDTO;
 
     @DynamicPropertySource
     static void postgresProperties(DynamicPropertyRegistry registry) {
@@ -59,50 +59,116 @@ class TransferControllerTest {
     MockMvc mockMvc;
     @Autowired
     private UserService userService;
-
-    private String username1 = "user1";
-    private String username2 = "user2";
-    private String password1 = "password1";
-    private String password2 = "password2";
-    private UserDTO userDTO;
     private List<AccountDTO> accounts;
 
+    private AccountDTO accountDTO;
+
+
     @BeforeEach
+
     public void createDataBase() {
-        userDTO = userService.createUser(username1, password1);
-        accounts = userDTO.getAccounts();
-
-
-        Optional<Account> accountByUser_idAndId = accountRepository.getAccountByUser_IdAndId(
-                userDTO.getId(), accounts.get(2).getId());
-        accountByUser_idAndId.ifPresent(account -> {
-            account.setAmount(1000L);
-            accountRepository.save(account);
-        });
-        userDTO = userService.createUser(username2, password2);
+        UserDTO userDTO1 = userService.createUser("user1", "password1");
+        UserDTO userDTO2 = userService.createUser("user2", "password2");
     }
 
-    private AccountDTO getRubAccount() {
+
+    private AccountDTO getRubAccount(List<AccountDTO> accounts) {
         return accounts.stream()
                 .filter(accountDTO -> accountDTO.getCurrency().equals(AccountCurrency.RUB))
                 .findFirst().orElse(null);
     }
 
+
+    @AfterEach
+    public void cleanDataBases() {
+        userRepository.deleteAll();
+        accountRepository.deleteAll();
+    }
+
+
+    @DisplayName("Перевод $")
     @Test
-    void transfer() throws Exception {
+    void shouldTransfer_Ok() throws Exception {
+
+        Long fromUserId = userRepository.findByUsername("user1").get().getId();
+        Long toUserId = userRepository.findByUsername("user2").get().getId();
+        Long fromId = getRubAccount(userService.getUser(fromUserId).getAccounts()).getId();
+        Long toId = getRubAccount(userService.getUser(toUserId).getAccounts()).getId();
 
         JSONObject transfer = new JSONObject();
-        transfer.put("fromAccountId", 1);
-        transfer.put("toUserId", 2);
-        transfer.put("toAccountId", getRubAccount().getId());
-        transfer.put("amount", 500);
+        transfer.put("fromAccountId", fromId);
+        transfer.put("toUserId", toUserId);
+        transfer.put("toAccountId", toId);
+        transfer.put("amount", 1);
 
         mockMvc.perform(post("/transfer")
                         .header(HttpHeaders.AUTHORIZATION,
-                                getAuthenticationHeader(username1, password1))
-                        .content(transfer.toString())
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is4xxClientError());
+                                getAuthenticationHeader("user1", "password1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transfer.toString()))
+                .andExpect(status().isOk());
     }
 
+    @DisplayName("Неверный Id аккаунта")
+    @Test
+    void shouldNoTransfer_IncorrectId() throws Exception {
+
+        Long fromUserId = userRepository.findByUsername("user1").get().getId();
+        Long toUserId = userRepository.findByUsername("user2").get().getId();
+        Long fromId = getRubAccount(userService.getUser(fromUserId).getAccounts()).getId();
+        Long toId = getRubAccount(userService.getUser(toUserId).getAccounts()).getId();
+
+        JSONObject transfer = new JSONObject();
+        transfer.put("fromAccountId", fromId);
+        transfer.put("toUserId", toUserId);
+        transfer.put("toAccountId", toId + 1);
+        transfer.put("amount", 1);
+
+        mockMvc.perform(post("/transfer")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                getAuthenticationHeader("user1", "password1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transfer.toString()))
+                .andExpect(status().isNotFound());
+    }
+
+    @DisplayName("Неверный сумма перевода")
+    @Test
+    void shouldNoTransfer_IncorrectAmount() throws Exception {
+
+        Long fromUserId = userRepository.findByUsername("user1").get().getId();
+        Long toUserId = userRepository.findByUsername("user2").get().getId();
+        Long fromId = getRubAccount(userService.getUser(fromUserId).getAccounts()).getId();
+        Long toId = getRubAccount(userService.getUser(toUserId).getAccounts()).getId();
+
+        JSONObject transfer = new JSONObject();
+        transfer.put("fromAccountId", fromId);
+        transfer.put("toUserId", toUserId);
+        transfer.put("toAccountId", toId);
+        transfer.put("amount", 5);
+        mockMvc.perform(post("/transfer")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                getAuthenticationHeader("user1", "password1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transfer.toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(String.format("Cannot withdraw %d %s", 5, AccountCurrency.RUB)));
+
+        transfer.put("amount", -1);
+
+        mockMvc.perform(post("/transfer")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                getAuthenticationHeader("user1", "password1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transfer.toString()))
+                .andExpect(status().isBadRequest());
+
+
+    }
 }
+
+
+
+
+
+
