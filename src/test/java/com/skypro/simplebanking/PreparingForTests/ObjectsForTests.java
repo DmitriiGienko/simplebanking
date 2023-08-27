@@ -1,6 +1,7 @@
 package com.skypro.simplebanking.PreparingForTests;
 
 import com.skypro.simplebanking.entity.User;
+import com.skypro.simplebanking.repository.UserRepository;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -48,6 +49,8 @@ public class ObjectsForTests {
 
         return List.of(user1, user2, user3, user4);
     }
+
+
 
 
 }

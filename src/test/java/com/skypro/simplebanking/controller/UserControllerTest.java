@@ -99,6 +99,19 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.username", is("newUser")));
     }
 
+    @DisplayName("Имя пользователя занято")
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void shouldNotCreateNewUserByAdmin_NameError() throws Exception {
+
+        userService.createUser("newUser", "password1");
+
+        mockMvc.perform(post("/user")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createNewUser().toString()))
+                .andExpect(status().isBadRequest());
+    }
+
 
     @DisplayName("Получение всех пользователей")
     @Test

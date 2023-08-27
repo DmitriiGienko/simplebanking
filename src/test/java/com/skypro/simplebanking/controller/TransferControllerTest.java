@@ -61,6 +61,8 @@ class TransferControllerTest {
     public void createDataBase() {
         UserDTO userDTO1 = userService.createUser("user1", "password1");
         UserDTO userDTO2 = userService.createUser("user2", "password2");
+
+
     }
 
 
@@ -122,9 +124,20 @@ class TransferControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(transfer.toString()))
                 .andExpect(status().isNotFound());
+
+        transfer.put("fromAccountId", fromId + 13);
+        transfer.put("toAccountId", toId);
+
+        mockMvc.perform(post("/transfer")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                getAuthenticationHeader("user1", "password1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transfer.toString()))
+                .andExpect(status().isNotFound());
+
     }
 
-    @DisplayName("Неверный сумма перевода")
+    @DisplayName("Неверная сумма перевода")
     @Test
     void shouldNoTransfer_IncorrectAmount() throws Exception {
 
@@ -154,8 +167,29 @@ class TransferControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(transfer.toString()))
                 .andExpect(status().isBadRequest());
+    }
 
+    @DisplayName("Неверная валюта")
+    @Test
+    void shouldNoTransfer_IncorrectCurrency() throws Exception {
 
+        long fromUserId = userRepository.findByUsername("user1").get().getId();
+        long toUserId = userRepository.findByUsername("user2").get().getId();
+        long fromId = getRubAccount(userService.getUser(fromUserId).getAccounts()).getId();
+        long toId = getRubAccount(userService.getUser(toUserId).getAccounts()).getId();
+
+        JSONObject transfer = new JSONObject();
+        transfer.put("fromAccountId", fromId);
+        transfer.put("toUserId", toUserId);
+        transfer.put("toAccountId", toId - 1);
+        transfer.put("amount", 1);
+
+        mockMvc.perform(post("/transfer")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                getAuthenticationHeader("user1", "password1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transfer.toString()))
+                .andExpect(status().isBadRequest());
     }
 }
 
